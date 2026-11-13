@@ -18,14 +18,31 @@ sv read <file>                # 主力：自动识别协议+编码并美化打�
   -f, --format fixed|delimited|json|auto   # 强制解析器（无 spec 也能读）
   -d, --delimiter '|'         # 强制分隔符（配合 delimited）
   -e, --encoding gbk|utf-8|gb18030|auto    # 强制编码，覆盖 spec 声明
-  -t, --view table|detail|hex # 输出形态，默认 table；detail 看原始值/解析值对照
+  -t, --view table|detail|hex # 输出形态，默认 table；detail 看解析值/类型/字节偏移对照
   --raw                       # 不做类型格式化，显示原始值
+  --no-color                  # 强制无色输出（也可用 NO_COLOR/FORCE_COLOR 环境变量控制）
   -r, --records 1-5           # 只看指定记录
 sv detect <file>              # 诊断：猜测的协议/编码/分隔符/行长，不确定时先跑这个
 sv gen --spec s.yaml --count 5 [--out f] [--seed 42] [-e gbk]   # 按协议反向生成数据文件
 sv spec check <spec.yaml>     # 校验 spec
 sv spec infer <datafile>      # 从数据文件反推草稿 spec（字段名是 colN 占位，需人工补语义）
 ```
+
+## detail 视图显示约定（-t detail）
+
+每条记录一个字段块，列为 `# / 字段 / 解析值 / 类型 / [偏移]`（偏移列仅定长协议出现）：
+
+```
+ #   字段      解析值           类型       偏移
+ 1   PROD_CD   P0000001(8)      str(8)     [0,8)
+ 2   PROD_NM   货币基金(8)      str(20)    [8,28)
+ 3   RATE      0.25000(7)      dec(7,5)   [28,35)
+```
+
+- **解析值**：`值(实际字节数)`，按字节计（GBK 汉字 ×2），即该字段在文件中的原始内容大小——枚举等映射字段按原始码计（如 `CNY→人民币(3)`），不是显示值长度；`--raw` 时该列回退为原始串
+- **类型**：`str(8)` = 类型(协议字节长度)；dec 追加小数位 `dec(7,5)` = len,小数位；变长/JSON 无协议长度，显示裸类型，仅 dec 显示 `dec(2)`（小数位）；`…尾料`（行溢出内容）不带协议长度
+- **偏移**：`[start,end)` 左闭右开字节区间，可对照协议文档逐字段核对切分
+- **配色**：解析值默认色、`(字节数)` 与偏移暗淡、类型青色、解析错误红色。色彩控制：终端默认彩色，管道/重定向自动关闭；`NO_COLOR=1`（任意非空值）强制无色——连粗体/暗淡属性也不输出任何 ANSI 转义，适配无法渲染转义序列的终端；`FORCE_COLOR=1` 在管道中强制彩色（配合 `less -R`）；`--no-color` 参数优先级最高
 
 ## 协议识别优先级
 
@@ -137,7 +154,7 @@ sv spec infer T1.111.2020.csv > specs/t1-111-draft.yaml
 2. **写 spec** 到 `specs/` 目录，`match` 写上文件名规律
 3. **校验**：`sv spec check specs/xxx.yaml`
 4. **造样本**：`sv gen --spec specs/xxx.yaml --count 5 --seed 1 --out /tmp/t.txt` —— 回读校验通过说明 spec 自洽
-5. **解析真实文件**：`sv read 实际文件`（按 match 自动匹配）；字段对不齐时用 `-t detail` 看原始值与字节偏移，对照协议文档修 spec
+5. **解析真实文件**：`sv read 实际文件`（按 match 自动匹配）；字段对不齐时用 `-t detail` 看类型、字节偏移 `[start,end)` 与解析值+实际字节数，对照协议文档修 spec
 6. 协议变更时：只改 spec 的 `fields`，无需动任何代码
 
 ## 何时用强制参数
@@ -149,6 +166,7 @@ sv spec infer T1.111.2020.csv > specs/t1-111-draft.yaml
 | 没写 spec，只想快速看分隔符文件 | `sv read f -f delimited -d '|'` |
 | 怀疑识别结果 | 先 `sv detect f` 看诊断 |
 | 只想看原始字节 | `-t hex`；只看原始值不做类型格式化 `--raw` |
+| 终端不支持色彩 / 输出到管道 | 管道默认自动无色；`NO_COLOR=1` 强制无色，`FORCE_COLOR=1` 管道中强制彩色（`--no-color` 优先级最高） |
 
 ## 当前版本限制
 

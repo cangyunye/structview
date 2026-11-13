@@ -26,13 +26,15 @@ python3 -m venv .venv --copies   # 外置卷/不支持符号链接的文件系�
 
 ```bash
 sv read samples/data/T1.111.2020.csv        # 按 specs/*.yaml 的 match 自动匹配
-sv read samples/data/prod.222.2026.txt -t detail   # 定长详情视图（字节偏移/原始值对照）
+sv read samples/data/prod.222.2026.txt -t detail   # 定长详情视图（类型/偏移/解析值+实际字节）
 cat resp.json | sv read -                   # stdin
 sv detect unknown.dat                       # 识别诊断
 sv gen --spec specs/prod-222.yaml --count 5 --seed 42 --out /tmp/t.txt   # 反向造数据
 sv spec check specs/t1-111.yaml             # 校验 spec
 sv spec infer unknown.dat                   # 从数据反推草稿 spec
 ```
+
+`-t detail` 视图约定：类型列 `str(8)` = 类型(协议字节长度)，dec 显示 `dec(7,5)`（len,小数位）；偏移列 `[0,8)` 左闭右开字节区间；解析值 `3000(4)` = 值(文件中实际字节数)。色彩开关：终端默认彩色，管道/重定向自动关闭；`NO_COLOR=1` 强制无色（含粗体等属性），`FORCE_COLOR=1` 在管道中强制彩色，`--no-color` 参数优先级最高。
 
 ## 协议识别优先级
 

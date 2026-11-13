@@ -17,6 +17,7 @@ class Field:
     error: str | None = None   # 非致命解析错误说明
     offset: int | None = None  # 定长模式：起始字节偏移
     length: int | None = None  # 定长模式：字节长度
+    scale: int | None = None   # dec：隐含小数位数
 
 
 @dataclass

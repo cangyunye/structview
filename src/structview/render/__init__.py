@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from rich.console import Console
 from rich.text import Text
 
@@ -15,8 +17,14 @@ FMT_DESC = {
 }
 
 
-def make_console(no_color: bool = False, stderr: bool = False) -> Console:
-    return Console(highlight=False, no_color=no_color, stderr=stderr)
+def make_console(no_color: bool | None = None, stderr: bool = False) -> Console:
+    # 色彩开关优先级：--no-color 参数 > NO_COLOR 环境变量 > rich 自动检测
+    # （非 tty 自动无色，FORCE_COLOR=1 可在管道中强制彩色）。
+    # 关闭时显式 color_system=None：连粗体/暗淡这类属性也不输出任何 ANSI 转义，
+    # 兼容无法渲染转义序列的终端。
+    if no_color or os.environ.get("NO_COLOR"):
+        return Console(highlight=False, stderr=stderr, color_system=None)
+    return Console(highlight=False, stderr=stderr)
 
 
 def print_header(console: Console, filename: str, res: models.ParseResult) -> None:

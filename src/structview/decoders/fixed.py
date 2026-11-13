@@ -28,13 +28,14 @@ def parse_line(raw_line: bytes, spec: Spec, encoding: str, line_no: int,
         text = _decode_chunk(chunk, fd.encoding or encoding)
         value, err = format_value(fd, text)
         out.append(models.Field(name=fd.name, type=fd.type, raw=text, value=value,
-                                error=err, offset=pos, length=fd.length))
+                                error=err, offset=pos, length=fd.length, scale=fd.scale))
         pos += fd.length
     if pos < len(raw_line):
         rest = raw_line[pos:]
         warnings.append(f"行{line_no}: 按字段合计 {pos}B，行内多出 {len(rest)}B 尾料")
         text = _decode_chunk(rest, encoding)
-        out.append(models.Field(name="…尾料", raw=text, value=visible(text)))
+        out.append(models.Field(name="…尾料", raw=text, value=visible(text),
+                                offset=pos, length=len(rest)))
     return out
 
 

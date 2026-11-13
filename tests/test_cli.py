@@ -18,6 +18,15 @@ DELIM_DOC = {
     ],
 }
 
+FIXED_DOC = {
+    "name": "P", "format": "fixed", "encoding": "gbk", "record_len": 16,
+    "fields": [
+        {"name": "CODE", "len": 8, "type": "str"},
+        {"name": "RATE", "len": 7, "type": "dec", "scale": 5},
+        {"name": "ST", "len": 1, "type": "enum", "map": {"1": "正常"}},
+    ],
+}
+
 
 @pytest.fixture(autouse=True)
 def _wide_terminal(monkeypatch):
@@ -45,6 +54,53 @@ def test_read_record_range(tmp_path, capsys):
     assert "A" not in out.split("\n")[0] or True
     body = out
     assert "2026-01-02" in body and "2026-01-03" in body and "2026-01-01" not in body
+
+
+def test_detail_fixed_view(tmp_path, capsys):
+    f = tmp_path / "a.txt"
+    line = "P0000001".ljust(8) + "0025000" + "1"
+    f.write_bytes((line + "\n").encode("gbk"))
+    spec = write_spec(tmp_path / "s.yaml", FIXED_DOC)
+    rc = main(["read", str(f), "-p", str(spec), "-t", "detail", "--no-color"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    # 类型列：类型(协议字节长度)，dec 追加小数位
+    assert "str(8)" in out and "dec(7,5)" in out and "enum(1)" in out
+    # 偏移列：左闭右开字节区间
+    assert "[0,8)" in out and "[8,15)" in out and "[15,16)" in out
+    # 解析值列：值(实际字节数)
+    assert "P0000001(8)" in out and "0.25000(7)" in out and "正常(1)" in out
+
+
+def test_detail_delimited_no_offset(tmp_path, capsys):
+    f = tmp_path / "a.csv"
+    f.write_bytes("A|20260101|10050\n".encode("gbk"))
+    spec = write_spec(tmp_path / "s.yaml", DELIM_DOC)
+    rc = main(["read", str(f), "-p", str(spec), "-t", "detail", "--no-color"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    # 变长无协议长度：裸类型，dec 仅显示小数位；无偏移列
+    assert "dec(2)" in out and "100.50(5)" in out and "2026-01-01(8)" in out
+    assert "[0," not in out
+
+
+def test_color_env_control(tmp_path, capsys, monkeypatch):
+    f = tmp_path / "a.csv"
+    f.write_bytes("A|20260101|10050\n".encode("gbk"))
+    spec = write_spec(tmp_path / "s.yaml", DELIM_DOC)
+    argv = ["read", str(f), "-p", str(spec)]
+    monkeypatch.setenv("TERM", "xterm-256color")
+
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    main(argv)
+    assert "\x1b[" in capsys.readouterr().out          # 管道中强制彩色
+
+    main(argv + ["--no-color"])
+    assert "\x1b[" not in capsys.readouterr().out      # --no-color 完全无转义
+
+    monkeypatch.setenv("NO_COLOR", "1")
+    main(argv)
+    assert "\x1b[" not in capsys.readouterr().out      # NO_COLOR 优先于 FORCE_COLOR
 
 
 def test_read_fixed_without_spec_errors(tmp_path, capsys):

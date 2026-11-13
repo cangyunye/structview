@@ -65,7 +65,8 @@ def parse(data: bytes, spec: Spec | None, encoding: str, *, delimiter=None, raw_
             if spec and j < len(spec.fields):
                 fd = spec.fields[j]
                 value, err = format_value(fd, cell)
-                fields.append(models.Field(name=name, type=fd.type, raw=cell, value=value, error=err))
+                fields.append(models.Field(name=name, type=fd.type, raw=cell, value=value,
+                                           error=err, scale=fd.scale))
             else:
                 fields.append(models.Field(name=name, raw=cell, value=cell.strip()))
         records.append(models.Record(index=len(records) + 1, line_no=i, fields=fields, warning=warning))

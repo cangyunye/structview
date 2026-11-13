@@ -49,6 +49,15 @@ def main():
         "ORD003;王五;20260102;500;FAIL",
     ]), "utf-8")
 
+    # DOS 行尾（CRLF）演示：sv 识别行尾风格，read 头部标注、detect 详报
+    dos = "\r\n".join([
+        "ORD001;张三;20260101;129900;PAID",
+        "ORD002;李四;20260102;8850;PAID",
+        "ORD003;王五;20260102;500;FAIL",
+    ]) + "\r\n"
+    (DATA / "orders_dos.csv").write_bytes(dos.encode("utf-8"))
+    print("  orders_dos.csv (utf-8, CRLF)")
+
     # 定长（GBK，44B/行）；最后一行 43B：缺状态字段，演示行长告警
     lines = [
         prod_line("P0000001", "货币基金", "0025000", "20260101", "1"),

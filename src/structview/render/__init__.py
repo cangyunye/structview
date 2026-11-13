@@ -34,6 +34,9 @@ def type_style(t: str | None) -> str | None:
     return TYPE_STYLES.get(t or "str")
 
 
+LINE_ENDING_LABELS = {"dos": "DOS(CRLF)", "unix": "Unix(LF)", "mac": "Mac(CR)", "mixed": "行尾混用"}
+
+
 def make_console(no_color: bool | None = None, stderr: bool = False) -> Console:
     # 色彩开关优先级：--no-color 参数 > NO_COLOR 环境变量 > rich 自动检测
     # （非 tty 自动无色，FORCE_COLOR=1 可在管道中强制彩色）。
@@ -54,6 +57,9 @@ def print_header(console: Console, filename: str, res: models.ParseResult) -> No
         desc += f" {res.delimiter!r}"
     t.append(f" · {desc}")
     t.append(f" · {res.encoding}")
+    le = LINE_ENDING_LABELS.get(res.line_ending or "")
+    if le:
+        t.append(f" · {le}", style="dim")
     n = len(res.records)
     if res.fmt == "json" and res.payload:
         n = res.payload.get("count", n)
@@ -92,7 +98,7 @@ def print_warnings(console: Console, warnings: list[str]) -> None:
 
 def show(res: models.ParseResult, filename: str, view: str = "table",
          data: bytes | None = None, extra_lines: list[str] | None = None,
-         no_color: bool = False, raw_mode: bool = False) -> None:
+         no_color: bool = False, raw_mode: bool = False, per_line: int = 10) -> None:
     console = make_console(no_color)
     print_header(console, filename, res)
     print_notes(console, extra_lines or [])
@@ -110,7 +116,7 @@ def show(res: models.ParseResult, filename: str, view: str = "table",
         show_detail(console, res, raw_mode)
     else:
         from .table import show_table
-        show_table(console, res, raw_mode)
+        show_table(console, res, raw_mode, per_line)
 
     if res.trailer:
         print_section(console, res.trailer)

@@ -40,6 +40,7 @@ class Section:
 class ParseResult:
     fmt: str = "delimited"        # fixed / delimited / json / generic
     encoding: str = "utf-8"
+    line_ending: str | None = None  # dos / unix / mac / mixed / none
     spec_name: str | None = None
     delimiter: str | None = None
     records: list[Record] = _field(default_factory=list)

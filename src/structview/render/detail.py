@@ -1,4 +1,4 @@
-"""详情视图：每条记录一个字段块，展示解析值（含实际字节数）与类型/偏移等协议元信息。"""
+"""详情视图：每条记录一个字段块，展示原始值（含补位转义）与解析值（含实际字节数）对照及类型/偏移。"""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from rich.table import Table as RichTable
 from rich.text import Text
 
 from .. import models
+from ..fields import visible
 from . import type_style
 
 
@@ -56,12 +57,14 @@ def show_detail(console: Console, res: models.ParseResult, raw_mode: bool = Fals
         t = RichTable(box=box.SIMPLE, show_edge=False, padding=(0, 1))
         t.add_column("#", justify="right", style="dim")
         t.add_column("字段", style="bold")
+        t.add_column("原始值", style="dim")
         t.add_column("解析值")
         t.add_column("类型")
         if fixed:
             t.add_column("偏移", style="dim")
         for j, f in enumerate(r.fields, 1):
             cells: list = [str(j), Text(f.name),
+                           Text(visible(f.raw) if f.raw else "", style="dim"),
                            _value_cell(f, res.encoding, raw_mode),
                            Text(_type_desc(f), style=type_style(f.type))]
             if fixed:

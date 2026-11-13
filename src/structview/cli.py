@@ -17,7 +17,7 @@ from rich.text import Text
 
 from . import __version__
 from .decoders import get_decoder
-from .detect import detect as detect_content, guess_field_type
+from .detect import detect as detect_content, detect_line_ending, guess_field_type
 from .enc import decode_text, resolve_encoding
 from .gen import generate, resolve_gen_encoding
 from .render import make_console, show
@@ -84,6 +84,9 @@ def cmd_read(args) -> int:
     res = decoder(data, spec, enc, delimiter=delimiter, raw_mode=args.raw)
     if generic:
         res.fmt = "generic"
+    res.line_ending, _ = detect_line_ending(data)
+    if res.line_ending == "mixed":
+        res.warnings.append("行尾混用 CRLF/LF/CR（对账文件通常要求统一行尾），已按各自行尾正常切分")
 
     extra = []
     if spec_src:
@@ -97,7 +100,7 @@ def cmd_read(args) -> int:
 
     show(res, "stdin" if args.file == "-" else Path(args.file).name,
          view=args.view, data=data, extra_lines=extra,
-         no_color=args.no_color, raw_mode=args.raw)
+         no_color=args.no_color, raw_mode=args.raw, per_line=args.per_line)
     return 0
 
 
@@ -123,6 +126,7 @@ def cmd_detect(args) -> int:
 
     enc_desc = det.encoding + ("；" + "；".join(det.encoding_notes) if det.encoding_notes else "")
     line("编码", enc_desc)
+    line("行尾", det.line_ending_desc, dim=(det.line_ending == "unix"))
     lens = [x for x in det.line_lens if x > 0]
     if lens:
         ld = f"{len(lens)} 个非空行，行长 {min(lens)}–{max(lens)} 字节"
@@ -319,6 +323,8 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("-t", "--view", choices=["table", "detail", "hex"], default="table",
                     help="输出形态（缺省 table）")
     rd.add_argument("--raw", action="store_true", help="显示原始值，不做类型格式化")
+    rd.add_argument("--per-line", type=int, default=10, metavar="N",
+                    help="table 视图每行最多字段数，超出按字段分段打印（0=不分段，缺省 10）")
     rd.add_argument("-r", "--records", type=_parse_range, metavar="1-5",
                     help="只看指定记录")
     rd.add_argument("--no-color", action="store_true")

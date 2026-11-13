@@ -27,7 +27,7 @@ python3 -m venv .venv --copies   # 外置卷/不支持符号链接的文件系�
 ```bash
 sv read samples/data/T1.111.2020.csv        # 按 specs/*.yaml 的 match 自动匹配
 sv read samples/data/T2.333.2026.csv        # 头/体/尾文件：同名 .head/.tail sidecar spec
-sv read samples/data/prod.222.2026.txt -t detail   # 定长详情视图（类型/偏移/解析值+实际字节）
+sv read samples/data/prod.222.2026.txt -t detail   # 定长详情视图（原始值/类型/偏移/解析值对照）
 cat resp.json | sv read -                   # stdin
 sv detect unknown.dat                       # 识别诊断
 sv gen --spec specs/prod-222.yaml --count 5 --seed 42 --out /tmp/t.txt   # 反向造数据
@@ -44,7 +44,7 @@ sv spec infer unknown.dat                   # 从数据反推草稿 spec
 3. spec 自带 `match` 文件名模式（扫描 `specs_dir`，默认 `specs/`）
 4. 内容启发式（JSON → 定长 → 分隔符 → 兜底表格）
 
-编码：spec 声明（`encoding: gbk` 等）优先，CLI `-e` 可强制覆盖；auto 链为 BOM → utf-8 → gb18030 → latin-1。
+编码：spec 声明（`encoding: gbk` 等）优先，CLI `-e` 可强制覆盖；auto 链为 BOM → utf-8 → gb18030 → latin-1。行尾自动识别 DOS(CRLF)/Unix(LF)/Mac(CR)/混用：`read` 头部标注、`detect` 详报，混用告警。宽表自动按字段分段打印（`--per-line N`，缺省 10，0=不分段），续段标题标明字段范围与记录对应关系。
 
 ## spec 编写
 

@@ -1,4 +1,4 @@
-from structview.detect import detect, guess_field_type, scan_delimiter
+from structview.detect import detect, detect_line_ending, guess_field_type, scan_delimiter
 
 
 def test_fixed_uniform_line_lengths():
@@ -74,3 +74,19 @@ def test_guess_int_and_dec():
 def test_guess_enum():
     t, _, note = guess_field_type(["PAID", "NEW", "PAID", "FAIL"])
     assert t == "enum" and "PAID" in note
+
+
+def test_line_ending_styles():
+    assert detect_line_ending(b"a\nb\n")[0] == "unix"
+    assert detect_line_ending(b"a\r\nb\r\n")[0] == "dos"
+    assert detect_line_ending(b"a\rb")[0] == "mac"  # 纯 Mac 行尾不含 \n
+    assert detect_line_ending(b"abc")[0] == "none"
+    code, desc = detect_line_ending(b"a\r\nb\nc\rd")
+    assert code == "mixed"
+    assert "CRLF" in desc and "LF" in desc and "CR" in desc
+
+
+def test_detect_reports_line_ending():
+    det = detect(b"A" * 10 + b"\r\n" + b"B" * 10 + b"\r\n")
+    assert det.line_ending == "dos"
+    assert "DOS" in det.line_ending_desc

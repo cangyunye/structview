@@ -21,6 +21,8 @@ class Detection:
     delimiter: str | None = None
     line_count: int = 0
     line_lens: list[int] = _field(default_factory=list)
+    line_ending: str = "none"     # dos / unix / mac / mixed / none
+    line_ending_desc: str = "无换行"
     notes: list[str] = _field(default_factory=list)
 
 
@@ -44,6 +46,21 @@ def scan_delimiter(lines: list[str]) -> tuple[str | None, str | None]:
     return None, None
 
 
+def detect_line_ending(data: bytes) -> tuple[str, str]:
+    """识别行尾风格，返回 (代号, 说明)：dos(CRLF) / unix(LF) / mac(CR) / mixed / none。"""
+    crlf = data.count(b"\r\n")
+    lf = data.count(b"\n") - crlf
+    cr = data.count(b"\r") - crlf
+    kinds = [k for k, c in (("dos", crlf), ("unix", lf), ("mac", cr)) if c > 0]
+    if not kinds:
+        return "none", "无换行"
+    if len(kinds) == 1:
+        return kinds[0], {"dos": f"DOS（CRLF × {crlf}）", "unix": f"Unix（LF × {lf}）",
+                          "mac": f"Mac（CR × {cr}）"}[kinds[0]]
+    parts = [p for p, c in ((f"CRLF ×{crlf}", crlf), (f"LF ×{lf}", lf), (f"CR ×{cr}", cr)) if c]
+    return "mixed", "混用（" + " + ".join(parts) + "）"
+
+
 def detect(data: bytes) -> Detection:
     from .enc import detect_encoding, decode_text
 
@@ -52,6 +69,7 @@ def detect(data: bytes) -> Detection:
     raw_lines = split_lines(data)
     det.line_lens = [len(ln) for ln in raw_lines]
     det.line_count = sum(1 for ln in raw_lines if ln.strip())
+    det.line_ending, det.line_ending_desc = detect_line_ending(data)
     text, _ = decode_text(data, det.encoding)
     lines = text.splitlines()
 

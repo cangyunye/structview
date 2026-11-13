@@ -1,0 +1,14 @@
+# 变长分隔符协议示例：T2 清算文件（头/体/尾结构演示）
+# 体：字段分隔符 |；金额为隐含 2 位小数；日期 yyyyMMdd
+# 头/尾：同名 t2-333.head.yaml / t2-333.tail.yaml，存在才加载解析（首行→头、末行→尾）
+name: T2 清算文件
+match: ["T2.333.*.csv"]
+encoding: gbk
+format: delimited
+delimiter: "|"
+fields:
+  - {name: 商户号,   type: str}
+  - {name: 交易日期, type: date, fmt: "%Y%m%d"}
+  - {name: 交易金额, type: dec,  scale: 2}
+  - {name: 币种,     type: enum, map: {CNY: 人民币, USD: 美元}}
+  - {name: 状态,     type: enum, map: {"00": 成功, "01": 待清算, "02": 失败}}

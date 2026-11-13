@@ -71,3 +71,40 @@ def test_fixed_field_level_encoding_override():
             + b"0025000" + b"20260101" + b"1")
     res = parse(line + b"\n", spec, "gbk")
     assert res.records[0].fields[1].value == "货币基金"
+
+
+def make_section_spec() -> Spec:
+    s = make_spec()
+    s.header_fields = [FieldDef(name="文件标识", length=1), FieldDef(name="总笔数", type="int", length=2)]
+    s.tail_fields = [FieldDef(name="校验码", length=4)]
+    return s
+
+
+def test_fixed_sections_and_record_len_skips_head_tail():
+    data = b"H05\n" + make_line() + b"\n" + make_line() + b"\n" + b"MD5X\n"
+    res = parse(data, make_section_spec(), "gbk")
+    assert not res.warnings  # 头 3B / 尾 4B ≠ record_len 44 不误报
+    assert res.header is not None
+    assert [f.value for f in res.header.fields] == ["H", "5"]  # int 格式化去前导零
+    assert (res.header.fields[0].offset, res.header.fields[0].length) == (0, 1)
+    assert len(res.records) == 2
+    assert (res.records[0].line_no, res.records[1].line_no) == (2, 3)
+    assert res.trailer is not None and res.trailer.fields[0].value == "MD5X"
+
+
+def test_fixed_header_only_file_warns_missing_tail():
+    spec = make_section_spec()
+    spec.tail_fields = None
+    spec.header_fields = [FieldDef(name="文件标识", length=1)]
+    spec.tail_fields = [FieldDef(name="校验码", length=4)]
+    res = parse(b"H\n", spec, "gbk")
+    assert res.header is not None and res.trailer is None
+    assert any("缺少尾记录" in w for w in res.warnings)
+
+
+def test_fixed_single_line_as_tail():
+    spec = make_spec()
+    spec.tail_fields = [FieldDef(name="校验码", length=4)]
+    res = parse(b"MD5X\n", spec, "gbk")
+    assert res.trailer is not None and res.trailer.fields[0].value == "MD5X"
+    assert res.records == []

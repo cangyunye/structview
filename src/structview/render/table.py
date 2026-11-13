@@ -7,6 +7,7 @@ from rich.table import Table as RichTable
 from rich.text import Text
 
 from .. import models
+from . import type_style
 
 _RIGHT_TYPES = {"int", "dec"}
 
@@ -27,6 +28,6 @@ def show_table(console: Console, res: models.ParseResult, raw_mode: bool = False
         cells: list = [str(r.index)]
         for f in r.fields:
             value = f.raw.strip() if raw_mode else f.value
-            cells.append(Text(value, style="red" if f.error else None))
+            cells.append(Text(value, style="red" if f.error else type_style(f.type)))
         t.add_row(*cells, style=row_style)
     console.print(t)

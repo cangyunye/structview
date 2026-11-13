@@ -67,17 +67,27 @@ def resolve_gen_encoding(spec: Spec, cli_enc: str | None) -> str:
     return "utf-8" if enc == "auto" else enc
 
 
+def _gen_line(field_defs, rng: random.Random, encoding: str, spec: Spec) -> bytes:
+    vals = [gen_value(fd, rng) for fd in field_defs]
+    if spec.fmt == "fixed":
+        return b"".join(_fit_bytes(v, fd, encoding) for fd, v in zip(field_defs, vals))
+    return (spec.delimiter or "|").join(vals).encode(encoding, errors="replace")
+
+
 def generate(spec: Spec, encoding: str, count: int, seed: int | None):
-    """生成数据并回读校验，返回 (文件字节, 回读 ParseResult 或 None)。"""
+    """生成数据并回读校验，返回 (文件字节, 回读 ParseResult 或 None)。
+
+    spec 加载了同名 .head/.tail sidecar 时，生成 头行 + 体 + 尾行。
+    头尾字段取值同体规则（按类型随机/sample 池），需固定值（如总笔数）用 sample。
+    """
     rng = random.Random(seed)
     lines: list[bytes] = []
+    if spec.header_fields:
+        lines.append(_gen_line(spec.header_fields, rng, encoding, spec))
     for _ in range(max(count, 0)):
-        vals = [gen_value(fd, rng) for fd in spec.fields]
-        if spec.fmt == "fixed":
-            line = b"".join(_fit_bytes(v, fd, encoding) for fd, v in zip(spec.fields, vals))
-        else:
-            line = (spec.delimiter or "|").join(vals).encode(encoding, errors="replace")
-        lines.append(line)
+        lines.append(_gen_line(spec.fields, rng, encoding, spec))
+    if spec.tail_fields:
+        lines.append(_gen_line(spec.tail_fields, rng, encoding, spec))
     out = b"\n".join(lines) + (b"\n" if lines else b"")
 
     res = None

@@ -93,7 +93,9 @@ def test_color_env_control(tmp_path, capsys, monkeypatch):
 
     monkeypatch.setenv("FORCE_COLOR", "1")
     main(argv)
-    assert "\x1b[" in capsys.readouterr().out          # 管道中强制彩色
+    out = capsys.readouterr().out
+    assert "\x1b[" in out                               # 管道中强制彩色
+    assert "32m" in out and "35m" in out                # date 绿 / dec 品红，按类型着色
 
     main(argv + ["--no-color"])
     assert "\x1b[" not in capsys.readouterr().out      # --no-color 完全无转义
@@ -155,3 +157,46 @@ def test_gen_stdout_then_read(tmp_path, capsys):
     out = capsys.readouterr().out
     assert rc == 0
     assert "3 条记录" in out
+
+
+T2_DOC = {
+    "name": "T2", "format": "delimited", "delimiter": "|", "encoding": "gbk",
+    "fields": [
+        {"name": "商户号"},
+        {"name": "交易日期", "type": "date", "fmt": "%Y%m%d"},
+        {"name": "交易金额", "type": "dec", "scale": 2},
+    ],
+}
+
+
+def write_t2_specs(tmp_path):
+    main = write_spec(tmp_path / "t.yaml", T2_DOC)
+    (tmp_path / "t.head.yaml").write_text(
+        yaml.safe_dump({"name": "清算头", "fields": [
+            {"name": "文件标识"}, {"name": "总笔数", "type": "int"}]}, allow_unicode=True),
+        encoding="utf-8")
+    (tmp_path / "t.tail.yaml").write_text(
+        yaml.safe_dump({"fields": [{"name": "校验码"}]}, allow_unicode=True),
+        encoding="utf-8")
+    f = tmp_path / "a.csv"
+    f.write_bytes("H|2\nA|20260101|10050\nB|20260102|2000\nT|OK\n".encode("gbk"))
+    return main, f
+
+
+def test_read_head_tail_sections(tmp_path, capsys):
+    spec, f = write_t2_specs(tmp_path)
+    rc = main(["read", str(f), "-p", str(spec), "--no-color"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "文件头 · 清算头" in out and "文件尾" in out
+    assert "总笔数" in out and "校验码" in out
+    assert "2 条记录" in out  # 头尾不计入体记录数
+
+
+def test_read_records_filter_keeps_sections(tmp_path, capsys):
+    spec, f = write_t2_specs(tmp_path)
+    rc = main(["read", str(f), "-p", str(spec), "--no-color", "-r", "1"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "文件头" in out and "文件尾" in out  # 过滤体记录不影响头尾展示
+    assert "1 条记录" in out

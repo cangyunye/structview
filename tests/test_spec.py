@@ -115,3 +115,43 @@ def test_config_overrides(tmp_path):
     spec, src = match_config_overrides(cfg, "abc.txt", tmp_path)
     assert spec is not None and spec.name == "X"
     assert match_config_overrides(cfg, "other.txt", tmp_path)[0] is None
+
+
+def test_sidecar_head_tail_loaded(tmp_path):
+    p = write_spec(tmp_path / "s.yaml", DELIM_DOC)
+    (tmp_path / "s.head.yaml").write_text(
+        yaml.safe_dump({"name": "清算头", "fields": [{"name": "总笔数", "type": "int"}]},
+                       allow_unicode=True), encoding="utf-8")
+    (tmp_path / "s.tail.yaml").write_text(
+        yaml.safe_dump([{"name": "校验码"}], allow_unicode=True), encoding="utf-8")
+    spec = load_spec(p)
+    assert spec.header_fields is not None and spec.header_fields[0].name == "总笔数"
+    assert spec.header_name == "清算头"
+    assert spec.tail_fields is not None and spec.tail_fields[0].name == "校验码"
+
+
+def test_sidecar_absent(tmp_path):
+    spec = load_spec(write_spec(tmp_path / "s.yaml", DELIM_DOC))
+    assert spec.header_fields is None and spec.tail_fields is None
+
+
+def test_sidecar_malformed_warns_and_ignored(tmp_path):
+    p = write_spec(tmp_path / "s.yaml", DELIM_DOC)
+    (tmp_path / "s.head.yaml").write_text("fields: [{name: a}, 3]\n", encoding="utf-8")
+    spec = load_spec(p)
+    assert spec.header_fields is None
+    assert any("s.head.yaml" in w for w in spec.warnings)
+
+
+def test_find_spec_sidecars_not_standalone(tmp_path):
+    d = tmp_path / "specs"
+    write_spec(d / "t1.yaml", DELIM_DOC)
+    (d / "t1.head.yaml").write_text("fields: [{name: a}]\n", encoding="utf-8")
+    (d / "t1.tail.yaml").write_text("fields: [{name: a}]\n", encoding="utf-8")
+    spec, notes = find_spec("T1.111.2020.csv", [d])
+    assert spec is not None and spec.name == "T1"
+    assert spec.header_fields is not None  # 命中主 spec 时顺便加载同名 sidecar
+    d2 = tmp_path / "only"
+    d2.mkdir()
+    (d2 / "x.head.yaml").write_text("fields: [{name: a}]\n", encoding="utf-8")
+    assert find_spec("T1.111.2020.csv", [d2])[0] is None  # sidecar 不作为独立协议

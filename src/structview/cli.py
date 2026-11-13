@@ -166,15 +166,41 @@ def cmd_gen(args) -> int:
     c = make_console(args.no_color, stderr=True)
     c.print(f"✓ 已生成 {args.count} 条记录 → {target}（编码 {enc}，{len(out)} 字节）", style="green")
     if res is not None:
-        errs = [(r.index, f.name) for r in res.records for f in r.fields if f.error]
+        errs = [(f"行{r.line_no if r.line_no is not None else r.index}", f.name)
+                for r in res.records for f in r.fields if f.error]
+        for sec in (res.header, res.trailer):
+            if sec:
+                errs += [(sec.title, f.name) for f in sec.fields if f.error]
         if errs:
             c.print(f"⚠ 回读校验: {len(res.records)} 条记录，{len(errs)} 个字段解析异常"
-                    f"（如 行{errs[0][0]} {errs[0][1]}）", style="yellow")
+                    f"（如 {errs[0][0]} {errs[0][1]}）", style="yellow")
         else:
             c.print(f"✓ 回读校验: {len(res.records)} 条记录，字段解析全部正常", style="green")
         for w in res.warnings[:5]:
             c.print(Text(f"⚠ {w}", style="yellow"))
     return 0
+
+
+def _fields_table(fields) -> RichTable:
+    t = RichTable(box=box.SIMPLE, show_edge=False, padding=(0, 1))
+    t.add_column("#", justify="right", style="dim")
+    t.add_column("name", style="bold")
+    t.add_column("type")
+    t.add_column("len", justify="right")
+    t.add_column("fmt")
+    t.add_column("scale", justify="right")
+    t.add_column("map")
+    t.add_column("sample")
+    for i, fd in enumerate(fields, 1):
+        t.add_row(
+            str(i), fd.name, fd.type,
+            str(fd.length) if fd.length is not None else "—",
+            fd.fmt or "—",
+            str(fd.scale) if fd.scale is not None else "—",
+            ", ".join(f"{k}→{v}" for k, v in (fd.map or {}).items()) or "—",
+            ", ".join(map(str, fd.sample)) if fd.sample else "—",
+        )
+    return t
 
 
 def cmd_spec_check(args) -> int:
@@ -187,25 +213,13 @@ def cmd_spec_check(args) -> int:
     if spec.record_len:
         info += f"  record_len={spec.record_len}B"
     c.print(info)
-    t = RichTable(box=box.SIMPLE, show_edge=False, padding=(0, 1))
-    t.add_column("#", justify="right", style="dim")
-    t.add_column("name", style="bold")
-    t.add_column("type")
-    t.add_column("len", justify="right")
-    t.add_column("fmt")
-    t.add_column("scale", justify="right")
-    t.add_column("map")
-    t.add_column("sample")
-    for i, fd in enumerate(spec.fields, 1):
-        t.add_row(
-            str(i), fd.name, fd.type,
-            str(fd.length) if fd.length is not None else "—",
-            fd.fmt or "—",
-            str(fd.scale) if fd.scale is not None else "—",
-            ", ".join(f"{k}→{v}" for k, v in (fd.map or {}).items()) or "—",
-            ", ".join(map(str, fd.sample)) if fd.sample else "—",
-        )
-    c.print(t)
+    c.print(_fields_table(spec.fields))
+    for title, fields, name in (("文件头", spec.header_fields, spec.header_name),
+                                ("文件尾", spec.tail_fields, spec.tail_name)):
+        if fields:
+            t = Text(f"── {title}" + (f" · {name}" if name else ""), style="bold cyan")
+            c.print(t)
+            c.print(_fields_table(fields))
     for w in spec.warnings:
         c.print(Text(f"⚠ {w}", style="yellow"))
     return 0

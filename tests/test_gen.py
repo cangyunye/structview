@@ -85,3 +85,20 @@ def test_resolve_gen_encoding():
     spec.encoding = "gbk"
     assert resolve_gen_encoding(spec, None) == "gbk"
     assert resolve_gen_encoding(spec, "utf-8") == "utf-8"
+
+
+def test_gen_with_head_tail_sidecar_fields():
+    spec = Spec(name="T2", fmt="delimited", encoding="gbk", delimiter="|",
+                fields=[FieldDef(name="商户号"), FieldDef(name="金额", type="dec", scale=2)],
+                header_fields=[FieldDef(name="文件标识", sample=["H"]),
+                               FieldDef(name="总笔数", type="int", sample=[2])],
+                tail_fields=[FieldDef(name="校验码", sample=["OK"])])
+    out, res = generate(spec, "gbk", count=2, seed=1)
+    lines = out.decode("gbk").splitlines()
+    assert len(lines) == 4                      # 头 + 2 体 + 尾
+    assert lines[0].startswith("H|") and lines[-1] == "OK"
+    assert res is not None
+    assert res.header is not None and res.header.fields[0].value == "H"
+    assert res.header.fields[1].value == "2"    # sample 固定取值生效
+    assert res.trailer is not None and res.trailer.fields[0].value == "OK"
+    assert not [f for sec in (res.header, res.trailer) for f in sec.fields if f.error]

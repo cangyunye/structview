@@ -1,0 +1,9 @@
+# T2 清算文件的文件头（首行）：字段结构与体不同，分隔符/编码继承主 spec
+# 总笔数/总金额为声明值，当前仅展示不与体自动核对；用 sv gen 造数时可写 sample 固定取值
+name: 清算头
+fields:
+  - {name: 文件标识, type: str}
+  - {name: 机构号,   type: str}
+  - {name: 业务月份, type: str}
+  - {name: 总笔数,   type: int}
+  - {name: 总金额,   type: dec, scale: 2}

@@ -1,0 +1,7 @@
+# T2 清算文件的文件尾（末行）：校验性质行
+name: 清算尾
+fields:
+  - {name: 记录类型, type: str}
+  - {name: 总笔数,   type: int}
+  - {name: 总金额,   type: dec, scale: 2}
+  - {name: 校验码,   type: str}

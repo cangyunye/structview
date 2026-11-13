@@ -8,6 +8,7 @@ from rich.table import Table as RichTable
 from rich.text import Text
 
 from .. import models
+from . import type_style
 
 
 def _type_desc(f: models.Field) -> str:
@@ -25,9 +26,9 @@ def _type_desc(f: models.Field) -> str:
 
 
 def _value_cell(f: models.Field, encoding: str, raw_mode: bool) -> Text:
-    """解析值列：值(实际字节数)；解析错误标红，--raw 时回退原始串。"""
+    """解析值列：值(实际字节数)，按数据类型着色；解析错误标红，--raw 时回退原始串。"""
     shown = f.raw.strip() if raw_mode else f.value
-    err_style = "red" if f.error else None
+    err_style = "red" if f.error else type_style(f.type)
     val = Text(shown, style=err_style)
     try:
         n = len(f.raw.strip().encode(encoding or "utf-8", errors="replace"))
@@ -56,13 +57,13 @@ def show_detail(console: Console, res: models.ParseResult, raw_mode: bool = Fals
         t.add_column("#", justify="right", style="dim")
         t.add_column("字段", style="bold")
         t.add_column("解析值")
-        t.add_column("类型", style="cyan")
+        t.add_column("类型")
         if fixed:
             t.add_column("偏移", style="dim")
         for j, f in enumerate(r.fields, 1):
             cells: list = [str(j), Text(f.name),
                            _value_cell(f, res.encoding, raw_mode),
-                           Text(_type_desc(f))]
+                           Text(_type_desc(f), style=type_style(f.type))]
             if fixed:
                 rng = (f"[{f.offset},{f.offset + (f.length or 0)})"
                        if f.offset is not None else "")

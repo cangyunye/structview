@@ -29,12 +29,22 @@ class Record:
 
 
 @dataclass
+class Section:
+    """头/尾单记录段（同名 .head/.tail sidecar spec 解析结果）。"""
+
+    title: str                                    # 展示标题，如「文件头」
+    fields: list[Field] = _field(default_factory=list)
+
+
+@dataclass
 class ParseResult:
     fmt: str = "delimited"        # fixed / delimited / json / generic
     encoding: str = "utf-8"
     spec_name: str | None = None
     delimiter: str | None = None
     records: list[Record] = _field(default_factory=list)
+    header: Section | None = None  # 文件头段（spec 有 .head sidecar 时）
+    trailer: Section | None = None  # 文件尾段（spec 有 .tail sidecar 时）
     warnings: list[str] = _field(default_factory=list)
     notes: list[str] = _field(default_factory=list)
     # JSON 专用载荷：{"mode": table/kv/pretty/embedded, ...}

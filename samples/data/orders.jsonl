@@ -1,0 +1,3 @@
+{"order_id": "O2026010100001", "user": "u1001", "amount": 123456789012345.67, "ccy": "CNY", "status": "PAID"}
+{"order_id": "O2026010100002", "user": "u1002", "amount": 99.9, "ccy": "USD", "status": "NEW"}
+{"order_id": "O2026010100003", "user": "u1003", "amount": 5, "ccy": "CNY", "status": "FAIL"}

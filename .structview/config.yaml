@@ -1,0 +1,10 @@
+# structview 项目配置（可选）
+# specs_dir: 扫描哪些目录下的 spec（默认 specs 与 .structview/specs）
+# overrides: glob → spec 显式映射，优先级高于 spec 自带的 match；
+#            当文件命名与 spec 内置规律冲突时用这里强制指定
+specs_dir:
+  - specs
+  - samples/specs
+# overrides:
+#   - {glob: "T1.111.*.csv", spec: specs/t1-111.yaml}
+# default_encoding: auto

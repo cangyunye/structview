@@ -1,0 +1,14 @@
+# 定长协议示例：产品表文件
+# 注意：len 一律按字节（GBK 下一个汉字占 2 字节，如 PROD_NM 的 20 字节 ≈ 10 个汉字）
+# 数值字段右对齐补 0；文本左对齐补空格
+name: 产品表文件
+match: ["prod.222.*.txt"]
+encoding: gbk
+format: fixed
+record_len: 44
+fields:
+  - {name: PROD_CD, len: 8,  type: str}
+  - {name: PROD_NM, len: 20, type: str}
+  - {name: RATE,    len: 7,  type: dec, scale: 5}
+  - {name: EFF_DT,  len: 8,  type: date, fmt: "%Y%m%d"}
+  - {name: ST,      len: 1,  type: enum, map: {"1": 正常, "0": 停售}}

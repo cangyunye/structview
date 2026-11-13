@@ -1,0 +1,13 @@
+# 变长分隔符协议示例（与 specs/t1-111.yaml 相同，供 samples 自带演示）
+name: T1 对账文件
+match: ["T1.111.*.csv"]
+encoding: gbk
+format: delimited
+delimiter: "|"
+fields:
+  - {name: 商户号,   type: str}
+  - {name: 交易日期, type: date, fmt: "%Y%m%d"}
+  - {name: 交易金额, type: dec,  scale: 2}
+  - {name: 币种,     type: enum, map: {CNY: 人民币, USD: 美元}}
+  - {name: 状态,     type: enum, map: {"00": 成功, "01": 待清算, "02": 失败}}
+  - {name: 备注,     type: str}

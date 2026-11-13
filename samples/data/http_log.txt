@@ -1,0 +1,12 @@
+2026-01-01 10:00:01 INFO  收到响应
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Request-Id: req-0001
+
+{"order_id": "O2026010100001", "amount": 123456789012345.67, "status": "PAID"}
+2026-01-01 10:00:02 INFO  处理完成
+2026-01-01 10:05:00 INFO  收到响应
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"err_code": "E400", "message": "金额格式错误"}

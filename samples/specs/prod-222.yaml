@@ -1,0 +1,12 @@
+# 定长协议示例（与 specs/prod-222.yaml 相同，供 samples 自带演示）
+name: 产品表文件
+match: ["prod.222.*.txt"]
+encoding: gbk
+format: fixed
+record_len: 44
+fields:
+  - {name: PROD_CD, len: 8,  type: str}
+  - {name: PROD_NM, len: 20, type: str}
+  - {name: RATE,    len: 7,  type: dec, scale: 5}
+  - {name: EFF_DT,  len: 8,  type: date, fmt: "%Y%m%d"}
+  - {name: ST,      len: 1,  type: enum, map: {"1": 正常, "0": 停售}}
